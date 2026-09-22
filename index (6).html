@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตู้มังงะ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* ====================================================================
+   วางค่า firebaseConfig ของคุณตรงนี้ (ดูขั้นตอนใน README)
+   Firebase Console > Project settings > Your apps > Web app > Config
+   ==================================================================== */
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBP3NN3GyPfPiIUVNSZw_RsfgQO5WiI6Wc",
+  authDomain: "manga-shelf-eec56.firebaseapp.com",
+  projectId: "manga-shelf-eec56",
+  appId: "1:1095290814169:web:9b445ee063986738b548c8"
+};
+</script>
+<style>
+:root{
+  color-scheme:light;
+  --paper:#F4F0FF; --panel:#F7F4FF; --ink:#1B1445; --edge:#1B1445; --muted:#5E5A85;
+  --r-lg:18px; --r-md:12px; --miss:#B01E3C; --unread:#4B3FD6; --tone:rgba(27,20,69,.16);
+  --sky-text:#FFFFFF; --sky-muted:rgba(255,255,255,.82);
+  --fd:"Kanit","Noto Sans Thai",system-ui,sans-serif;
+  --fb:"Sarabun","Noto Sans Thai",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 56px)}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:#2A1C74;color:var(--sky-text);font:400 16px/1.5 var(--fb);-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20px 30px,rgba(255,255,255,.95),transparent),
+    radial-gradient(1px 1px at 90px 120px,rgba(255,255,255,.8),transparent),
+    radial-gradient(2px 2px at 140px 60px,rgba(205,225,255,.9),transparent),
+    radial-gradient(70% 45% at 88% 6%,rgba(150,110,255,.6),transparent 70%),
+    radial-gradient(65% 42% at 6% 48%,rgba(70,130,255,.5),transparent 70%),
+    radial-gradient(75% 45% at 72% 98%,rgba(190,90,240,.5),transparent 70%),
+    linear-gradient(180deg,#2E1F82 0%,#4230A8 48%,#2A4CA8 100%);
+  background-size:180px 180px,130px 150px,260px 220px,100% 100%,100% 100%,100% 100%,100% 100%}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #FFD84D;outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 96px}
+
+/* header */
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+h1{font:700 34px/1.1 var(--fd);margin:0}
+.sub{margin:4px 0 0;color:var(--sky-muted);font-size:14px}
+.tally{text-align:right;flex:none;background:var(--panel);color:var(--ink);border:2px solid var(--edge);border-radius:var(--r-md);padding:6px 12px 4px;box-shadow:3px 3px 0 rgba(10,5,50,.5)}
+.tally .n{display:block;font:700 44px/1 var(--fd);color:var(--miss)}
+.tally .l{font-size:13px;color:var(--muted)}
+.banner{border:2px dashed var(--edge);padding:8px 12px;font-size:14px;margin:0 0 12px;background:var(--panel);color:var(--ink)}
+
+/* tabs */
+.tabs{overflow-x:auto;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;background:rgba(38,24,110,.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:2px solid rgba(255,255,255,.55)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;white-space:nowrap;min-height:48px;background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;font:600 14px var(--fd);color:var(--sky-muted);padding:0 12px}
+.tab[aria-selected="true"]{color:#fff;border-bottom-color:#fff}
+.tab .ct{display:inline-block;min-width:20px;padding:0 5px;margin-left:3px;border:2px solid currentColor;border-radius:11px;font-size:12px;line-height:18px}
+
+/* tools */
+.tools{display:flex;gap:10px;margin:14px 0}
+.tools input{flex:1;min-width:0;height:44px;padding:0 12px;border:2px solid var(--edge);background:var(--panel);color:var(--ink);border-radius:var(--r-md)}
+.btn{min-height:44px;padding:0 16px;border:2px solid var(--edge);background:var(--ink);color:var(--paper);font:600 15px var(--fd);border-radius:var(--r-md)}
+.btn2{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:2px solid var(--edge);background:var(--panel);color:var(--ink);font:600 15px var(--fd);border-radius:var(--r-md)}
+.btn.sm{min-height:40px}
+.tools .btn{margin-left:auto;flex:none}
+.tools .btn,.empty .btn{background:#fff;color:#1B1445;border-color:#fff}
+.hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+#tabHint{color:var(--sky-muted)}
+
+/* cards */
+.card{display:flex;gap:14px;padding:12px;margin-bottom:16px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:4px 4px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.cover{flex:none;width:84px;aspect-ratio:4/5;object-fit:cover;border:2px solid var(--edge);background:var(--panel);display:block;border-radius:2px}
+.cover.ph{display:flex;align-items:center;justify-content:center;background:radial-gradient(var(--tone) 1.3px,transparent 1.5px) 0 0/6px 6px,var(--panel);font:700 34px var(--fd);color:var(--muted)}
+.bd{flex:1;min-width:0}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.hd h3{font:600 18px/1.3 var(--fd);margin:0;overflow-wrap:anywhere}
+.lnk{flex:none;background:none;border:0;color:var(--muted);text-decoration:underline;min-height:32px;padding:0 4px;font-size:14px}
+.cnt{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;margin:2px 0 8px;font-size:14px;color:var(--muted)}
+.cnt b{font:700 16px var(--fd)}
+.mn{color:var(--miss)}
+.ok{color:var(--ink)}
+.strip{display:flex;align-items:flex-end;gap:2px;height:18px;margin-bottom:12px}
+.strip i{flex:1 1 0;min-width:2px;max-width:12px;display:block}
+.strip .o{height:18px;background:var(--ink)}
+.strip .m{height:9px;background:var(--miss)}
+.strip .r{height:18px;background:var(--ink)}
+.strip .u{height:12px;background:var(--unread)}
+.strip .n{height:5px;background:var(--tone)}
+.ub{color:var(--unread)}
+.chip.rd{border-color:var(--unread);color:var(--unread)}
+.chip.rd:active{background:var(--unread);color:var(--panel)}
+.pb{display:flex;align-items:center;gap:10px;margin:2px 0 12px}
+.pb .trk{flex:1;height:10px;border-radius:5px;background:var(--tone);overflow:hidden}
+.pb .fil{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#FFA9DB,#B59BFF)}
+.pb.rd .fil{background:linear-gradient(90deg,#9B8CFF,#4B3FD6)}
+.pb.done .fil{background:linear-gradient(90deg,#6FEAC0,#3FB8FF)}
+.pb.done b{color:#0B7A5C}
+.pb b{min-width:38px;text-align:right;font:600 13px var(--fd);color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-width:44px;height:40px;padding:0 8px;border:2px solid var(--miss);background:transparent;color:var(--miss);font:600 16px var(--fd);border-radius:var(--r-md);transition:opacity .16s,transform .16s}
+.chip:active{background:var(--miss);color:var(--panel)}
+.chip.gone{opacity:0;transform:scale(.5)}
+.more{height:40px;padding:0 10px;border:0;background:none;color:var(--muted);text-decoration:underline}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.acts button{min-height:40px;padding:0 12px;border:2px solid var(--edge);background:var(--panel);font:600 14px var(--fd);border-radius:var(--r-md)}
+
+.sec{font:600 17px var(--fd);margin:26px 0 12px;color:var(--sky-text)}
+.hero{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:14px;margin-bottom:18px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:4px 4px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.hero .big{flex:none;flex-direction:column;line-height:1;width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#FFC8EC,#E9C9FF);border:2px solid var(--edge);display:flex;align-items:center;justify-content:center;font:700 32px var(--fd)}
+.hero .ht{margin:0;font:700 21px/1.25 var(--fd)}
+.hero .big i{font:500 11px var(--fd);font-style:normal;margin-top:2px}
+.hero .hs{margin:0;color:var(--muted);font-size:14px}
+.hx{flex:1;min-width:0}
+.hero .hk{margin:0;color:var(--muted);font-size:13px}
+.lvs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-basis:100%;margin-top:8px}
+.lv{display:flex;flex-direction:column;justify-content:center;gap:2px;min-height:58px;padding:6px 4px;text-align:center;border:2px dashed var(--muted);color:var(--muted);border-radius:var(--r-md)}
+.lv b{font:600 13px/1.25 var(--fd)}
+.lv span{font-size:12px}
+.lv.on{border:2px solid var(--edge);background:linear-gradient(135deg,#FFC8EC,#E9C9FF);color:var(--ink)}
+.trophies{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
+.tile{position:relative;padding:8px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:4px 4px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.tc{position:relative}
+.tile .cover{width:100%}
+.tc::after{content:"★";position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FFC8EC,#E9C9FF);border:2px solid var(--edge);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink)}
+.rib{border-radius:0 8px 8px 0;position:absolute;left:0;bottom:8px;background:linear-gradient(135deg,#FFC8EC,#E9C9FF);color:var(--ink);font:700 12px var(--fd);padding:1px 8px;border:2px solid var(--edge);border-left:0}
+.tile h3{font:600 14px/1.3 var(--fd);margin:8px 0 0;overflow-wrap:anywhere}
+.tog{width:100%;text-align:left;padding:0 12px;height:44px}
+.ov{padding:14px;margin-bottom:16px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:4px 4px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.ovt{margin:0;color:var(--muted);font-size:14px}
+.ovn{margin:2px 0 10px;font-size:16px}
+.ovn b{font:700 38px/1.1 var(--fd)}
+.ovn span{float:right;font:700 22px var(--fd)}
+.bar{height:14px;border:2px solid var(--edge);background:var(--tone);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px}
+.stat{text-align:left;padding:12px;min-height:88px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:3px 3px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.stat b{display:block;font:700 30px/1.15 var(--fd)}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.gold{background:linear-gradient(135deg,#FFC8EC,#E9C9FF)}
+.stat.gold span{color:var(--ink)}
+.stat .rk{display:block;margin-top:2px;font:600 13px var(--fd);color:var(--ink)}
+.rail{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.rc{flex:none;width:96px}
+.rcb{display:block;width:100%;background:none;border:0;padding:0;text-align:left;color:var(--sky-text)}
+.rcb .cover{width:100%}
+.rcb span{display:block;margin-top:4px;font-size:13px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rings{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 12px;margin-bottom:16px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:4px 4px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.rg{text-align:center}
+.ring{position:relative;width:96px;height:96px;margin:0 auto 8px}
+.ring svg{display:block;width:96px;height:96px}
+.ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 22px var(--fd)}
+.rg .k{display:block;font:600 15px var(--fd)}
+.rg .v{font-size:13px;color:var(--muted)}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sh .lnk{color:var(--sky-muted)}
+.mini{display:flex;gap:12px;align-items:center;padding:10px;margin-bottom:12px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:3px 3px 0 rgba(10,5,50,.5);border-radius:var(--r-md)}
+.mini .cover{width:52px}
+.mini .mb{flex:1;min-width:0}
+.mini h3{font:600 15px/1.3 var(--fd);margin:0;overflow-wrap:anywhere}
+.mini p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.mini p b{font-family:var(--fd);color:var(--ink)}
+.mini p b.mn{color:var(--miss)}
+.mini .go{flex:none;min-height:40px;max-width:96px;padding:0 10px;border:2px solid var(--edge);background:var(--ink);color:var(--paper);font:600 14px/1.2 var(--fd);border-radius:var(--r-md)}
+.pbar{height:9px;margin-top:6px;background:var(--tone);border:2px solid var(--edge);border-radius:8px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--unread)}
+.acts .upin{width:64px;height:40px;padding:0 8px;border:2px solid var(--edge);background:var(--paper);color:var(--ink);border-radius:var(--r-md)}
+.acts .upto{display:flex;gap:6px}
+.filters{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.fchips{display:flex;flex-wrap:wrap;gap:8px}
+.fc{min-height:38px;padding:0 12px;border:2px solid rgba(255,255,255,.7);background:transparent;color:#fff;font:600 14px var(--fd);border-radius:var(--r-md)}
+.fc b{font-weight:600;opacity:.8;margin-left:2px}
+.fc[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:#fff}
+.sortrow{display:flex;align-items:center;gap:10px;color:var(--sky-muted);font-size:14px}
+.sortrow select{flex:1;min-width:0;height:42px;padding:0 10px;border:2px solid var(--edge);background:var(--panel);color:var(--ink);border-radius:var(--r-md);font:inherit}
+.stat{display:flex;align-items:center;gap:10px;min-height:76px}
+.stat>div{min-width:0}
+.ic{flex:none;width:42px;height:42px;border-radius:50%;border:2px solid var(--edge);display:flex;align-items:center;justify-content:center;background:var(--paper);color:var(--ink)}
+.ic svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic.miss{background:var(--miss);border-color:var(--miss);color:#fff}
+.ic.unread{background:var(--unread);border-color:var(--unread);color:#fff}
+.ic.read{background:var(--ink);color:var(--paper)}
+.ic.done{background:rgba(255,255,255,.78)}
+.ic.coin{background:#F5B93A;border-color:#F5B93A;color:var(--ink)}
+.pr{color:var(--muted)}
+.mosaic{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:6px}
+.mt{position:relative;display:block;min-width:0;padding:0;border:0;background:none;text-align:left;color:var(--sky-text)}
+.mtc{position:relative;width:100%;padding-top:125%;overflow:hidden;background:var(--panel);border:2px solid var(--edge);border-radius:2px}
+.mtc .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0;border-radius:0}
+.mtag{border-radius:0 8px 8px 0;position:absolute;left:0;top:6px;padding:0 6px;background:var(--miss);color:#fff;font:700 11px/18px var(--fd)}
+.mtb{height:5px;margin-top:5px;background:rgba(255,255,255,.28);border-radius:var(--r-md);overflow:hidden}
+.mtb.done i{background:linear-gradient(90deg,#6FEAC0,#3FB8FF)}
+.mtb i{display:block;height:100%;background:linear-gradient(90deg,#FFC8EC,#E9C9FF)}
+.mtt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;margin-top:4px;font:500 11px/1.3 var(--fd)}
+.acct{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px;margin-top:6px;font-size:13px;color:var(--sky-muted)}
+.acct .lnk{color:#fff;min-height:32px}
+.acct span{overflow-wrap:anywhere}
+.auth{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:min(420px,100%);padding:26px 22px;background:var(--panel);color:var(--ink);border:2px solid var(--edge);box-shadow:6px 6px 0 rgba(10,5,50,.55);border-radius:var(--r-md)}
+.auth-card h1{color:var(--ink);margin-bottom:8px}
+.auth-card p{margin:0 0 18px;color:var(--muted)}
+.auth-card .err{margin:14px 0 0}
+.gbtn{width:100%;min-height:48px}
+#authHint{margin-top:10px;color:var(--muted);font-size:13px}
+.dact .danger2{min-height:44px;padding:0 14px;border:2px solid var(--miss);background:transparent;color:var(--miss);font:600 15px var(--fd);border-radius:var(--r-md)}
+.empty{text-align:center;padding:36px 12px;color:var(--sky-muted)}
+.empty p{margin:0 0 14px}
+
+/* dialog */
+dialog{width:min(560px,calc(100% - 24px));max-height:calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));padding:0;border:2px solid var(--edge);background:var(--panel);color:var(--ink);box-shadow:6px 6px 0 rgba(10,5,50,.55);border-radius:var(--r-md);overflow:auto}
+dialog::backdrop{background:rgba(20,10,70,.65)}
+.din{padding:18px 16px 16px}
+.din h2{font:700 22px var(--fd);margin:0 0 14px}
+.seg{display:flex;margin-bottom:14px;border:2px solid var(--edge);border-radius:var(--r-md);overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;background:transparent;font:600 15px var(--fd)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.fld{display:block;margin-bottom:12px}
+.lbl{display:block;font:600 14px var(--fd);margin-bottom:4px}
+.fld input[type="text"],.fld input[type="number"]{width:100%;height:44px;padding:0 12px;border:2px solid var(--edge);background:var(--paper);border-radius:var(--r-md)}
+.bulk{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.brow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.brow input{height:40px;padding:0 8px;border:2px solid var(--edge);background:var(--paper);color:var(--ink);border-radius:var(--r-md);min-width:0}
+#rFrom,#rTo,#rUpto{width:80px}
+#xList{flex:1;width:auto;min-width:170px}
+.btn2.sm{min-height:40px;padding:0 12px;font-size:14px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;max-height:260px;overflow:auto;padding:2px}
+.vol{height:40px;border:2px solid var(--edge);background:transparent;font:600 15px var(--fd);border-radius:var(--r-md)}
+.vol[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.crow{display:flex;gap:12px;align-items:center}
+.crow .cover{width:64px}
+.col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.err{color:var(--miss);font-weight:600;margin:0 0 10px}
+.dact{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.danger{margin-left:auto;min-height:44px;padding:0 14px;border:2px solid var(--miss);background:transparent;color:var(--miss);font:600 15px var(--fd);border-radius:var(--r-md)}
+
+/* toast */
+.tw{position:fixed;left:0;right:0;bottom:0;padding:0 12px calc(16px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none;z-index:20}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:14px;max-width:520px;padding:10px 14px;background:var(--ink);color:var(--paper);border-radius:var(--r-md);font-size:15px}
+.toast button{background:none;border:0;color:inherit;font:700 15px var(--fd);text-decoration:underline;min-height:36px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* rounded corners: panels large, controls medium (cover images stay as they are) */
+.card,.hero,.tile,.ov,.stat,.rings,.mini,.tally,.rc,dialog,.auth-card,.banner{border-radius:var(--r-lg)}
+.toast{border-radius:16px}
+.banner{border-radius:var(--r-md)}
+</style>
+</head>
+<body>
+<div class="wrap" hidden>
+  <header class="top">
+    <div>
+      <h1>ตู้มังงะ</h1>
+      <p class="sub" id="sub"></p>
+      <div class="acct" id="acct" hidden>
+        <span id="acctMail"></span>
+        <button type="button" class="lnk" id="bData">สำรอง/นำเข้า</button>
+        <button type="button" class="lnk" id="bPing">ทดสอบการเชื่อมต่อ</button>
+        <button type="button" class="lnk" id="bOut">ออกจากระบบ</button>
+      </div>
+    </div>
+    <div class="tally"><span class="n" id="tN">0</span><span class="l">เล่มที่ยังขาด</span></div>
+  </header>
+  <p class="banner" id="banner" hidden></p>
+
+  <nav class="tabs" role="tablist" aria-label="หมวด">
+    <button class="tab" role="tab" data-tab="home" aria-selected="true">ภาพรวม</button>
+    <button class="tab" role="tab" data-tab="all" aria-selected="false">ทั้งหมด<span class="ct" id="cAll">0</span></button>
+    <button class="tab" role="tab" data-tab="wish" aria-selected="false">อยากได้<span class="ct" id="cWish">0</span></button>
+    <button class="tab" role="tab" data-tab="missing" aria-selected="false">ขาดเล่ม<span class="ct" id="cMissing">0</span></button>
+    <button class="tab" role="tab" data-tab="unread" aria-selected="false">ค้างอ่าน<span class="ct" id="cUnread">0</span></button>
+    <button class="tab" role="tab" data-tab="done" aria-selected="false">ครบชุด<span class="ct" id="cDone">0</span></button>
+  </nav>
+
+  <div class="tools">
+    <input id="q" type="search" placeholder="ค้นหาชื่อเรื่อง" aria-label="ค้นหาชื่อเรื่อง">
+    <button class="btn" id="add" type="button">+ เพิ่มเรื่อง</button>
+  </div>
+
+  <div class="filters" id="filters" hidden>
+    <div class="fchips" id="fchips" role="group" aria-label="กรองรายการ"></div>
+    <label class="sortrow"><span>เรียงตาม</span>
+      <select id="sortSel">
+        <option value="name">ชื่อ ก-ฮ</option>
+        <option value="status">สถานะ จบแล้วก่อน</option>
+        <option value="missMost">ขาดมากสุดก่อน</option>
+        <option value="missLeast">ขาดน้อยสุดก่อน</option>
+        <option value="volumes">จำนวนเล่มมากสุด</option>
+        <option value="newest">เพิ่มล่าสุดก่อน</option>
+      </select>
+    </label>
+  </div>
+
+  <p class="hint" id="tabHint"></p>
+  <main id="list" aria-live="polite"></main>
+</div>
+
+<dialog id="dlg" aria-labelledby="dTitle">
+  <div class="din">
+    <h2 id="dTitle">เพิ่มเรื่องใหม่</h2>
+    <div class="seg" role="group" aria-label="ประเภท">
+      <button type="button" id="segHave" aria-pressed="true">มีในคลัง</button>
+      <button type="button" id="segWish" aria-pressed="false">อยากได้</button>
+    </div>
+    <label class="fld"><span class="lbl">ชื่อเรื่อง</span><input id="fTitle" type="text" maxlength="120" autocomplete="off"></label>
+    <label class="fld"><span class="lbl">จำนวนเล่มทั้งหมด</span><input id="fTotal" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
+    <p class="hint">เรื่องที่ยังไม่จบ ใส่เท่าที่ออกแล้ว เพิ่มเล่มใหม่ทีหลังได้</p>
+    <label class="fld"><span class="lbl">ราคาต่อเล่ม (บาท) — ไม่บังคับ</span><input id="fPrice" type="number" inputmode="decimal" min="0" max="999999" step="1" placeholder="เช่น 145"></label>
+    <div class="fld" id="endWrap">
+      <button type="button" class="vol tog" id="fEnded" aria-pressed="false">เรื่องนี้จบแล้ว (ออกครบทุกเล่มแล้ว)</button>
+      <p class="hint" style="margin:6px 0 0">ต้องกำหนดว่าจบแล้ว และมีครบทุกเล่ม ถึงจะขึ้นเป็นครบชุด</p>
+    </div>
+    <div class="fld" id="ownedWrap">
+      <div class="seg" role="group" aria-label="เลือกว่าจะติ๊กอะไร">
+        <button type="button" id="mOwn" aria-pressed="true">เล่มที่มี</button>
+        <button type="button" id="mRead" aria-pressed="false">เล่มที่อ่านแล้ว</button>
+      </div>
+      <span class="lbl"><span id="ownedLbl">ติ๊กเล่มที่มีแล้ว</span> <span id="ownedCount" class="hint"></span></span>
+      <div class="bulk">
+        <div class="brow" id="readRow" hidden>
+          <span>อ่านถึงเล่ม</span>
+          <input id="rUpto" type="number" inputmode="numeric" min="1" placeholder="เช่น 40" aria-label="อ่านถึงเล่มที่">
+          <button type="button" class="btn2 sm" id="rUptoGo">ใช้</button>
+          <button type="button" class="btn2 sm" id="rSame">เท่ากับเล่มที่มี</button>
+        </div>
+        <div class="brow">
+          <button type="button" class="btn2 sm" id="bAll">ติ๊กครบทุกเล่ม</button>
+          <button type="button" class="btn2 sm" id="bNone">ล้างทั้งหมด</button>
+        </div>
+        <div class="brow">
+          <span>ช่วงเล่ม</span>
+          <input id="rFrom" type="number" inputmode="numeric" min="1" placeholder="จาก" aria-label="จากเล่มที่">
+          <span>ถึง</span>
+          <input id="rTo" type="number" inputmode="numeric" min="1" placeholder="ถึง" aria-label="ถึงเล่มที่">
+          <button type="button" class="btn2 sm" id="rOn">ติ๊ก</button>
+          <button type="button" class="btn2 sm" id="rOff">เอาออก</button>
+        </div>
+        <div class="brow">
+          <input id="xList" type="text" placeholder="มีครบ ยกเว้นเล่ม เช่น 3, 15, 40-42" aria-label="มีครบ ยกเว้นเล่ม">
+          <button type="button" class="btn2 sm" id="xGo">ใช้</button>
+        </div>
+      </div>
+      <div class="vgrid" id="ownedGrid"></div>
+    </div>
+    <div class="fld">
+      <span class="lbl">รูปปก</span>
+      <div class="crow">
+        <div id="fPrev"></div>
+        <div class="col">
+          <label class="btn2">เลือกรูป<input id="fFile" type="file" accept="image/*" hidden></label>
+          <button type="button" class="lnk" id="fClear" hidden>ลบรูปปก</button>
+        </div>
+      </div>
+    </div>
+    <p class="err" id="err" role="alert" hidden></p>
+    <div class="dact">
+      <button type="button" class="btn" id="bSave">บันทึก</button>
+      <button type="button" class="btn2" id="bCancel">ยกเลิก</button>
+      <button type="button" class="danger" id="bDel" hidden>ลบเรื่องนี้</button>
+    </div>
+  </div>
+</dialog>
+
+<section class="auth" id="auth">
+  <div class="auth-card">
+    <h1>ตู้มังงะ</h1>
+    <p id="authMsg">กำลังโหลด…</p>
+    <p id="authHint" hidden></p>
+    <button type="button" class="btn gbtn" id="bGoogle" hidden>เข้าสู่ระบบด้วย Google</button>
+    <p class="err" id="authErr" role="alert" hidden></p>
+  </div>
+</section>
+
+<dialog id="dlgData" aria-labelledby="dDataTitle">
+  <div class="din">
+    <h2 id="dDataTitle">สำรอง / นำเข้าข้อมูล</h2>
+    <p class="hint">ส่งออกเป็นไฟล์เก็บไว้ หรือนำเข้าไฟล์ที่ส่งออกมาจากหน้าเดิมบน Claude</p>
+    <div class="dact">
+      <button type="button" class="btn" id="bExp">ส่งออกไฟล์สำรอง</button>
+      <label class="btn2">นำเข้าไฟล์<input id="fImp" type="file" accept="application/json,.json" hidden></label>
+    </div>
+    <p class="hint" id="impMsg" role="status" style="margin-top:12px"></p>
+    <div class="dact" style="margin-top:18px;border-top:2px solid var(--edge);padding-top:14px">
+      <button type="button" class="danger2" id="bClear">ล้างข้อมูลทั้งหมด</button>
+    </div>
+    <div class="dact"><button type="button" class="btn2" id="bDataClose">ปิด</button></div>
+  </div>
+</dialog>
+
+<div class="tw"><div class="toast" id="toast" role="status" hidden></div></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+var db=null, assets=null, mode='local', loading=true;
+var series=[];
+var dirty=new Set(), timers={}, chains={};
+var tab='home', query='', expanded=new Set();
+var LS='manga_shelf_v1';
+
+/* ---------- data helpers ---------- */
+function nums(a,total){
+  var r=Array.isArray(a)?a.map(Number).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=total}):[];
+  return Array.from(new Set(r)).sort(function(x,y){return x-y});
+}
+function clean(id,d){
+  var total=Math.max(1,Math.min(999,parseInt(d.total,10)||1));
+  var owned=Array.isArray(d.owned)?d.owned.map(Number).filter(function(n){return Number.isInteger(n)&&n>=1&&n<=total}):[];
+  owned=Array.from(new Set(owned)).sort(function(a,b){return a-b});
+  return {
+    id:String(id),
+    title:String(d.title||'ไม่มีชื่อ').slice(0,120),
+    total:total, owned:owned, read:nums(d.read,total), wish:!!d.wish, ended:!!d.ended,
+    coverId:/^[A-Za-z0-9_-]{8,64}$/.test(d.coverId||'')?d.coverId:'',
+    coverData:(typeof d.coverData==='string'&&d.coverData.indexOf('data:image/')===0)?d.coverData:'',
+    createdAt:Number(d.createdAt)||0,
+    price:(function(){var p=Number(d.price);return (isFinite(p)&&p>0)?Math.min(999999,p):0})()
+  };
+}
+function body(s){return {title:s.title,total:s.total,owned:s.owned,read:s.read,wish:s.wish,ended:s.ended,coverId:s.coverId,coverData:s.coverData,createdAt:s.createdAt,price:s.price}}
+function get(id){return series.find(function(x){return x.id===id})}
+function unread(s){var r=new Set(s.read);return s.owned.filter(function(v){return !r.has(v)})}
+function spent(s){return Math.round((s.price||0)*s.owned.length)}
+function thb(n){return n.toLocaleString('th-TH')}
+function allVols(n){var r=[];for(var i=1;i<=n;i++)r.push(i);return r}
+function union(a,b){return Array.from(new Set(a.concat(b))).sort(function(x,y){return x-y})}
+function fmtRanges(a,maxParts){
+  var parts=[],i=0;
+  while(i<a.length){var j=i;while(j+1<a.length&&a[j+1]===a[j]+1)j++;parts.push(j>i?(a[i]+'\u2013'+a[j]):String(a[i]));i=j+1}
+  return parts.length>maxParts?parts.slice(0,maxParts).join(', ')+' …':parts.join(', ');
+}
+function miss(s){var set=new Set(s.owned),m=[];for(var i=1;i<=s.total;i++){if(!set.has(i))m.push(i)}return m}
+function newId(){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function byTitle(a,b){return a.title.localeCompare(b.title,'th')}
+
+/* ---------- persistence ---------- */
+function loadLocal(){try{return JSON.parse(localStorage.getItem(LS)||'[]').map(function(d){return clean(d.id,d)})}catch(e){return []}}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(series))}catch(e){toast('เก็บข้อมูลในเครื่องไม่ได้')}}
+function persist(id){
+  if(mode!=='cloud'){saveLocal();return}
+  dirty.add(id);clearTimeout(timers[id]);
+  timers[id]=setTimeout(function(){chains[id]=(chains[id]||Promise.resolve()).then(function(){return flush(id)})},400);
+}
+function flush(id){
+  var s=get(id);dirty.delete(id);
+  if(!s)return Promise.resolve();
+  return db.collection('series').doc(id).set(body(s)).catch(function(e){
+    toast(e&&e.code==='quota_exceeded'?'ฐานข้อมูลเต็ม บันทึกเพิ่มไม่ได้':'บันทึกไม่สำเร็จ ลองอีกครั้ง');
+  });
+}
+function removeSeries(s){
+  series=series.filter(function(x){return x.id!==s.id});
+  clearTimeout(timers[s.id]);dirty.delete(s.id);
+  if(mode==='cloud'){db.collection('series').doc(s.id).delete().catch(function(){toast('ลบไม่สำเร็จ ลองอีกครั้ง')})}else{saveLocal()}
+  dropAsset(s.coverId);
+}
+function dropAsset(id){if(id&&assets){try{assets.delete(id).catch(function(){})}catch(e){}}}
+
+/* ---------- toast ---------- */
+var tt;
+function hideToast(){$('#toast').hidden=true}
+function toast(msg,undo){
+  var t=$('#toast');t.textContent='';
+  var sp=document.createElement('span');sp.textContent=msg;t.appendChild(sp);
+  if(undo){var b=document.createElement('button');b.type='button';b.textContent='ยกเลิก';b.onclick=function(){undo();hideToast()};t.appendChild(b)}
+  t.hidden=false;clearTimeout(tt);tt=setTimeout(hideToast,4500);
+}
+
+/* ---------- rendering ---------- */
+function coverHTML(s){
+  var src=s.coverId?'/_blob/'+s.coverId:s.coverData;
+  if(src)return '<img class="cover" alt="" loading="lazy" src="'+esc(src)+'">';
+  return '<div class="cover ph" aria-hidden="true"><span>'+esc(Array.from(s.title)[0]||'?')+'</span></div>';
+}
+function pbar(pct,cls,label){
+  pct=Math.max(0,Math.min(100,pct));
+  return '<div class="pb'+(cls?' '+cls:'')+'" role="img" aria-label="'+esc(label)+'"><span class="trk"><i class="fil" style="width:'+pct+'%"></i></span><b>'+(cls==='done'?'✓ ':'')+pct+'%</b></div>';
+}
+function strip(s){
+  var have=s.total-miss(s).length;
+  return pbar(Math.round(have*100/s.total),(s.ended&&have===s.total)?'done':'','มี '+have+' จาก '+s.total+' เล่ม'+((s.ended&&have===s.total)?' ครบชุดแล้ว':''));
+}
+function head(s,noEdit){return '<div class="hd"><h3>'+esc(s.title)+'</h3>'+(noEdit===true?'':'<button type="button" class="lnk" data-act="edit">แก้ไข</button>')+'</div>'}
+
+function cardMissing(s,noEdit){
+  var m=miss(s),have=s.total-m.length,cap=30,ex=expanded.has(s.id);
+  var shown=ex?m:m.slice(0,cap);
+  var chips=shown.map(function(v){return '<button type="button" class="chip" data-act="got" data-v="'+v+'" aria-label="ได้เล่ม '+v+' แล้ว">'+v+'</button>'}).join('');
+  var more=m.length>cap?'<button type="button" class="more" data-act="more">'+(ex?'ย่อรายการ':'ดูอีก '+(m.length-cap)+' เล่ม')+'</button>':'';
+  return '<article class="card" data-id="'+esc(s.id)+'">'+coverHTML(s)+'<div class="bd">'+head(s,noEdit)+
+    '<p class="cnt"><b class="mn">ขาด '+m.length+' เล่ม</b><span>มี '+have+' จาก '+s.total+'</span></p>'+strip(s)+
+    '<div class="chips">'+chips+more+'</div><div class="acts" style="margin-top:10px"><button type="button" data-act="gotall">ได้ครบทุกเล่มแล้ว</button></div></div></article>';
+}
+function stripRead(s){
+  var u=unread(s).length,rd=s.owned.length-u;
+  return pbar(s.owned.length?Math.round(rd*100/s.owned.length):0,'rd','อ่านแล้ว '+rd+' จาก '+s.owned.length+' เล่มที่มี');
+}
+function cardUnread(s){
+  var u=unread(s),cap=30,ex=expanded.has(s.id),shown=ex?u:u.slice(0,cap);
+  var chips=shown.map(function(v){return '<button type="button" class="chip rd" data-act="read" data-v="'+v+'" aria-label="อ่านเล่ม '+v+' แล้ว">'+v+'</button>'}).join('');
+  var more=u.length>cap?'<button type="button" class="more" data-act="more">'+(ex?'ย่อรายการ':'ดูอีก '+(u.length-cap)+' เล่ม')+'</button>':'';
+  return '<article class="card" data-id="'+esc(s.id)+'">'+coverHTML(s)+'<div class="bd">'+head(s)+
+    '<p class="cnt"><b class="ub">ค้างอ่าน '+u.length+' เล่ม</b><span>อ่านแล้ว '+s.read.length+' เล่ม</span></p>'+stripRead(s)+
+    '<div class="chips">'+chips+more+'</div><div class="acts" style="margin-top:10px"><button type="button" data-act="readall">อ่านครบทุกเล่มที่มี</button><span class="upto"><input type="number" class="upin" inputmode="numeric" min="1" placeholder="เล่ม" aria-label="อ่านถึงเล่มที่"><button type="button" data-act="readupto">อ่านถึงเล่มนี้</button></span></div></div></article>';
+}
+function cardAll(s){
+  var m=miss(s),have=s.total-m.length;
+  var st=m.length?'<b class="mn">ขาด '+m.length+' เล่ม</b>':(s.ended?'<b class="ok">ครบชุดแล้ว ★</b>':'<b class="ok">ครบเท่าที่ออก</b>');
+  return '<article class="card" data-id="'+esc(s.id)+'">'+coverHTML(s)+'<div class="bd">'+head(s)+
+    '<p class="cnt">'+st+'<span>มี '+have+' จาก '+s.total+'</span><span>อ่านแล้ว '+s.read.length+' เล่ม</span><span>'+(s.ended?'จบแล้ว':'ยังไม่จบ')+'</span>'+(s.price?'<span class="pr">เล่มละ '+thb(s.price)+' บาท \u2014 ใช้ไป '+thb(spent(s))+' บาท</span>':'')+'</p>'+strip(s)+
+    (s.ended?'':'<div class="acts"><button type="button" data-act="plus">+ เล่มใหม่</button></div>')+'</div></article>';
+}
+function cardWish(s){
+  return '<article class="card" data-id="'+esc(s.id)+'">'+coverHTML(s)+'<div class="bd">'+head(s)+
+    '<p class="cnt"><span>อยากได้ '+s.total+' เล่ม</span></p>'+
+    '<div class="acts"><button type="button" data-act="bought">ซื้อแล้ว ย้ายเข้าคลัง</button></div></div></article>';
+}
+function emptyHTML(msg,withAdd){
+  return '<div class="empty"><p>'+esc(msg)+'</p>'+(withAdd?'<button type="button" class="btn" data-add="1">+ เพิ่มเรื่อง</button>':'')+'</div>';
+}
+
+var LV=[
+  {n:1,name:'มือใหม่หัดสะสม'},
+  {n:5,name:'อัศวินนักสะสม'},
+  {n:10,name:'ขาใหญ่แห่งตู้มังงะ'},
+  {n:25,name:'เซียนแห่งชั้นหนังสือ'},
+  {n:50,name:'จักรพรรดิมังงะ'},
+  {n:100,name:'ตำนานแห่งกาแล็กซี'}
+];
+function rankOf(n){var r=null;LV.forEach(function(l){if(n>=l.n)r=l});return r}
+function nextOf(n){return LV.find(function(l){return l.n>n})}
+function hero(n){
+  var r=rankOf(n),nx=nextOf(n);
+  var line=nx?'อีก '+(nx.n-n)+' เรื่องถึง "'+nx.name+'"':'ถึงระดับสูงสุดแล้ว';
+  var cells=LV.map(function(l){return '<div class="lv'+(n>=l.n?' on':'')+'"><b>'+esc(l.name)+'</b><span>'+l.n+' เรื่อง</span></div>'}).join('');
+  return '<section class="hero"><div class="big"><b>'+n+'</b><i>เรื่อง</i></div><div class="hx"><p class="hk">ฉายาของคุณ</p><p class="ht">'+(r?esc(r.name):'ยังไม่มีฉายา')+'</p><p class="hs">'+line+'</p></div><div class="lvs">'+cells+'</div></section>';
+}
+function tile(s){
+  return '<article class="tile" data-id="'+esc(s.id)+'"><div class="tc">'+coverHTML(s)+'<span class="rib">ครบ '+s.total+' เล่ม</span></div><h3>'+esc(s.title)+'</h3></article>';
+}
+function doneHTML(done,col,q){
+  var f=function(a){return q?a.filter(function(s){return s.title.toLowerCase().indexOf(q)>=0}):a};
+  var list=f(done).slice().sort(byTitle);
+  var near=f(col.filter(function(s){var n=miss(s).length;return s.ended&&n>=1&&n<=3})).sort(function(a,b){return miss(a).length-miss(b).length||byTitle(a,b)});
+  var h=hero(done.length);
+  if(list.length)h+='<div class="trophies">'+list.map(tile).join('')+'</div>';
+  else h+=emptyHTML(q?'ไม่พบเรื่องที่ตรงกับ "'+query.trim()+'"':'ยังไม่มีเรื่องที่ครบชุด ติ๊กเล่มให้ครบ แล้วกดแก้ไขเรื่องเพื่อกำหนดว่า "จบแล้ว" เรื่องนั้นจะมาอยู่ที่นี่',false);
+  if(near.length)h+='<h2 class="sec">ใกล้ครบแล้ว</h2>'+near.map(function(s){return cardMissing(s,true)}).join('');
+  return h;
+}
+
+function miniRead(s){
+  var u=unread(s),nx=u[0],o=s.owned.length,pc=o?Math.round((o-u.length)*100/o):0;
+  return '<div class="mini" data-id="'+esc(s.id)+'">'+coverHTML(s)+'<div class="mb"><h3>'+esc(s.title)+'</h3><p>ค้างอ่าน <b>'+u.length+'</b> เล่ม เล่มถัดไป <b>'+nx+'</b></p><div class="pbar" role="img" aria-label="อ่านแล้ว '+pc+'%"><i style="width:'+pc+'%"></i></div></div><button type="button" class="go" data-act="readnext">อ่านเล่ม '+nx+' แล้ว</button></div>';
+}
+function miniBuy(s){
+  var m=miss(s);
+  return '<div class="mini">'+coverHTML(s)+'<div class="mb"><h3>'+esc(s.title)+'</h3><p><b class="mn">ขาด '+m.length+' เล่ม</b></p><p>'+esc(fmtRanges(m,6))+'</p></div></div>';
+}
+var FILTERS=[['all','ทั้งหมด'],['ended','จบแล้ว'],['ongoing','ยังไม่จบ'],['complete','ครบเล่ม'],['lack','ยังขาด']];
+function passF(s,f){
+  var m=miss(s).length;
+  return f==='all'||(f==='ended'&&s.ended)||(f==='ongoing'&&!s.ended)||(f==='complete'&&m===0)||(f==='lack'&&m>0);
+}
+var SORTS={
+  name:byTitle,
+  status:function(a,b){return (+b.ended)-(+a.ended)||byTitle(a,b)},
+  missMost:function(a,b){return miss(b).length-miss(a).length||byTitle(a,b)},
+  missLeast:function(a,b){return miss(a).length-miss(b).length||byTitle(a,b)},
+  volumes:function(a,b){return b.total-a.total||byTitle(a,b)},
+  newest:function(a,b){return b.createdAt-a.createdAt||byTitle(a,b)}
+};
+var VW='manga_view_v1',filt='all',sortBy='name';
+function loadView(){
+  try{
+    var v=JSON.parse(localStorage.getItem(VW)||'{}');
+    if(FILTERS.some(function(f){return f[0]===v.f}))filt=v.f;
+    if(SORTS[v.s])sortBy=v.s;
+  }catch(e){}
+}
+function saveView(){try{localStorage.setItem(VW,JSON.stringify({f:filt,s:sortBy}))}catch(e){}}
+
+var IC={
+  shelf:'<path d="M3 21h18"/><rect x="4" y="6" width="4" height="15" rx="1"/><rect x="10" y="3" width="4" height="18" rx="1"/><rect x="16" y="8" width="4" height="13" rx="1"/>',
+  missing:'<rect x="5" y="3" width="14" height="18" rx="2" stroke-dasharray="3.2 3"/><path d="M9 12h6"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5.5A2.5 2.5 0 0 0 8 10M16 6h2.5A2.5 2.5 0 0 1 16 10"/><path d="M12 13v4M9 20h6M10 17h4"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.4A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  bookmark:'<path d="M6 3h12v18l-6-4-6 4z"/>',
+  read:'<path d="M3 5.5C6 4 9.5 4 12 6c2.5-2 6-2 9-.5V19c-3-1.5-6.5-1.5-9 .5-2.5-2-6-2-9-.5z"/><path d="M12 6v13.5"/><path d="M6.5 11.5l1.8 1.8 3-3.4"/>',
+  coin:'<circle cx="12" cy="12" r="8.5"/><path d="M9.3 14.7c.5.9 1.5 1.4 2.7 1.4 1.9 0 3-1 3-2.3 0-3-5.7-1.5-5.7-4.5 0-1.3 1.2-2.3 3-2.3 1.2 0 2.2.5 2.7 1.4"/><path d="M12 7.3v9.4"/>'
+};
+function ic(kind,name){return '<i class="ic '+kind+'" aria-hidden="true"><svg viewBox="0 0 24 24">'+IC[name]+'</svg></i>'}
+function stat(go,cls,kind,icon,numHtml,label,extra){
+  var inner=ic(kind,icon)+'<div>'+numHtml+'<span>'+label+'</span>'+(extra||'')+'</div>';
+  return go?'<button type="button" class="stat'+(cls?' '+cls:'')+'" data-go="'+go+'">'+inner+'</button>':'<div class="stat'+(cls?' '+cls:'')+'">'+inner+'</div>';
+}
+function hasCover(s){return (s.coverId||s.coverData)?1:0}
+
+function homeHTML(col,wish,withMiss,done){
+  if(!col.length&&!wish.length)return emptyHTML('ยังไม่มีเรื่องในตู้ เริ่มจากเพิ่มเรื่องแรก แล้วติ๊กเล่มที่มีอยู่',true);
+  var tot=0,own=0;
+  col.forEach(function(s){tot+=s.total;own+=s.owned.length});
+  var pct=tot?Math.round(own*100/tot):0;
+  var rdT=0,ubT=0,ubS=0,orT=0,spendT=0;col.forEach(function(s){rdT+=s.read.length;var u=unread(s).length;ubT+=u;orT+=s.owned.length-u;if(u)ubS++;spendT+=spent(s)});
+  function ring(pc,color,k,v){
+    var r=38,c=2*Math.PI*r,off=c*(1-pc/100);
+    return '<div class="rg"><div class="ring"><svg viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="'+r+'" fill="none" style="stroke:var(--tone)" stroke-width="11"/><circle cx="48" cy="48" r="'+r+'" fill="none" style="stroke:'+color+'" stroke-width="11" stroke-linecap="butt" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 48 48)"/></svg><b>'+pc+'%</b></div><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
+  }
+  var rpc=own?Math.round(orT*100/own):0;
+  var h='<section class="rings">'+ring(pct,'var(--ink)','สะสมแล้ว',own+' จาก '+tot+' เล่ม')+ring(rpc,'var(--unread)','อ่านแล้ว',orT+' จาก '+own+' เล่มที่มี')+'</section>';
+  var rk=rankOf(done.length);
+  h+='<div class="stats">'+
+    stat('all','','','shelf','<b>'+col.length+'</b>','เรื่องในตู้')+
+    stat('missing','','miss','missing','<b class="mn">'+(tot-own)+'</b>','เล่มที่ยังขาด จาก '+withMiss.length+' เรื่อง')+
+    stat('done','gold','done','trophy','<b>'+done.length+'</b>','ครบชุดแล้ว',rk?'<span class="rk">'+esc(rk.name)+'</span>':'')+
+    stat('wish','','','heart','<b>'+wish.length+'</b>','อยากได้')+
+    stat('unread','','unread','bookmark','<b class="ub">'+ubT+'</b>','เล่มค้างอ่าน จาก '+ubS+' เรื่อง')+
+    stat('','','read','read','<b>'+rdT+'</b>','เล่มที่อ่านแล้ว')+
+    stat('','gold','coin','coin','<b>'+thb(spendT)+'</b>','บาทที่ใช้ไปแล้ว')+
+    '</div>';
+  var shelf=col.slice().sort(function(a,b){return hasCover(b)-hasCover(a)||byTitle(a,b)});
+  if(shelf.length)h+='<div class="sh"><h2 class="sec">ตู้ของฉัน</h2>'+(shelf.length>12?'<button type="button" class="lnk" data-go="all">ดูทั้งหมด '+shelf.length+' เรื่อง</button>':'')+'</div><div class="mosaic">'+
+    shelf.slice(0,12).map(function(s){
+      var m=miss(s).length,pp=Math.round((s.total-m)*100/s.total);
+      return '<button type="button" class="mt" data-id="'+esc(s.id)+'" data-act="edit" aria-label="แก้ไข '+esc(s.title)+'">'+'<div class="mtc">'+coverHTML(s)+'</div>'+(m?'<span class="mtag">ขาด '+m+'</span>':'')+'<div class="mtb'+(s.ended&&m===0?' done':'')+'"><i style="width:'+pp+'%"></i></div><span class="mtt">'+esc(s.title)+'</span></button>';
+    }).join('')+'</div>';
+  var cont=col.filter(function(s){return unread(s).length}).sort(function(a,b){return unread(a).length-unread(b).length||byTitle(a,b)});
+  if(cont.length)h+='<div class="sh"><h2 class="sec">อ่านต่อ</h2>'+(cont.length>3?'<button type="button" class="lnk" data-go="unread">ดูทั้งหมด</button>':'')+'</div>'+cont.slice(0,3).map(miniRead).join('');
+  var buy=withMiss.slice().sort(function(a,b){return miss(a).length-miss(b).length||byTitle(a,b)});
+  if(buy.length)h+='<div class="sh"><h2 class="sec">ต้องซื้อต่อ</h2>'+(buy.length>3?'<button type="button" class="lnk" data-go="missing">ดูทั้งหมด</button>':'')+'</div>'+buy.slice(0,3).map(miniBuy).join('');
+  var near=col.filter(function(s){var n=miss(s).length;return s.ended&&n>=1&&n<=3}).sort(function(a,b){return miss(a).length-miss(b).length||byTitle(a,b)}).slice(0,3);
+  if(near.length)h+='<h2 class="sec">ใกล้ครบชุด</h2>'+near.map(cardMissing).join('');
+  return h;
+}
+
+function render(){
+  var col=series.filter(function(s){return !s.wish}), wish=series.filter(function(s){return s.wish});
+  var withMiss=col.filter(function(s){return miss(s).length});
+  var withUnread=col.filter(function(s){return unread(s).length});
+  var done=col.filter(function(s){return s.ended&&!miss(s).length});
+  var total=withMiss.reduce(function(n,s){return n+miss(s).length},0);
+  $('#tN').textContent=total;
+  $('#sub').textContent=loading?'กำลังโหลด…':('คลัง '+col.length+' เรื่อง  อยากได้ '+wish.length+' เรื่อง');
+  $('#cMissing').textContent=withMiss.length;$('#cAll').textContent=col.length;$('#cWish').textContent=wish.length;$('#cDone').textContent=done.length;$('#cUnread').textContent=withUnread.length;$('.tools').hidden=tab==='home';$('#add').hidden=tab==='done'||tab==='home';
+  $('#filters').hidden=tab!=='all';
+  if(tab==='all'){
+    $('#fchips').innerHTML=FILTERS.map(function(f){
+      var n=col.filter(function(x){return passF(x,f[0])}).length;
+      return '<button type="button" class="fc" data-f="'+f[0]+'" aria-pressed="'+(filt===f[0]?'true':'false')+'">'+f[1]+' <b>'+n+'</b></button>';
+    }).join('');
+    $('#sortSel').value=sortBy;
+  }
+  document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===tab?'true':'false')});
+  $('#tabHint').textContent=tab==='missing'?'แตะเลขเล่มเมื่อได้มาแล้ว เล่มนั้นจะหายจากรายการ':(tab==='unread'?'แตะเลขเล่มเมื่ออ่านแล้ว เล่มนั้นจะหายจากรายการ':'');
+  $('#tabHint').hidden=!((tab==='missing'&&withMiss.length)||(tab==='unread'&&withUnread.length));
+
+  var list=tab==='missing'?withMiss:tab==='unread'?withUnread:tab==='all'?col:wish;
+  var q=query.trim().toLowerCase();
+  if(q)list=list.filter(function(s){return s.title.toLowerCase().indexOf(q)>=0});
+  if(tab==='all')list=list.filter(function(x){return passF(x,filt)}).sort(SORTS[sortBy]);else list=list.slice().sort(byTitle);
+  var h='';
+  if(loading){h=emptyHTML('กำลังโหลดข้อมูล…',false)}
+  else if(tab==='home'){h=homeHTML(col,wish,withMiss,done)}
+  else if(tab==='done'){h=doneHTML(done,col,q)}
+  else if(!list.length){
+    if(q)h=emptyHTML('ไม่พบเรื่องที่ตรงกับ "'+query.trim()+'"',false);
+    else if(tab==='missing')h=col.length?emptyHTML('ครบทุกเรื่องแล้ว ไม่มีเล่มที่ขาด',false):emptyHTML('ยังไม่มีเรื่องในคลัง เพิ่มเรื่องแล้วติ๊กเล่มที่มีอยู่',true);
+    else if(tab==='unread')h=col.length?emptyHTML('ไม่มีเล่มค้างอ่าน อ่านครบทุกเล่มที่มีแล้ว',false):emptyHTML('ยังไม่มีเรื่องในคลัง',true);
+    else if(tab==='all')h=col.length?emptyHTML('ไม่มีเรื่องที่ตรงกับตัวกรองนี้',false):emptyHTML('ยังไม่มีเรื่องในคลัง',true);
+    else h=emptyHTML('ยังไม่มีเรื่องที่อยากได้',true);
+  } else {
+    h=list.map(tab==='missing'?cardMissing:tab==='unread'?cardUnread:tab==='all'?cardAll:cardWish).join('');
+  }
+  $('#list').innerHTML=h;
+
+  var bn=$('#banner');
+  if(!loading&&mode==='local'){bn.hidden=false;bn.textContent='ตอนนี้บันทึกไว้ในเครื่องนี้เท่านั้น เปิดหน้านี้จากลิงก์ที่เผยแพร่ใน claude.ai ด้วยบัญชีเดียวกันเพื่อให้ข้อมูลตรงกันทุกเครื่อง'}
+  else bn.hidden=true;
+}
+
+/* ---------- list actions ---------- */
+$('#list').addEventListener('click',function(e){
+  var add=e.target.closest('[data-add]');if(add){openDlg(null);return}
+  var go=e.target.closest('[data-go]');if(go){setTab(go.dataset.go);window.scrollTo(0,0);return}
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var card=b.closest('[data-id]');if(!card)return;
+  var id=card.dataset.id,s=get(id);if(!s)return;
+  var act=b.dataset.act;
+  if(act==='got'){
+    var v=+b.dataset.v;b.classList.add('gone');
+    setTimeout(function(){
+      var s2=get(id);if(!s2||s2.owned.indexOf(v)>=0)return;
+      s2.owned=s2.owned.concat(v).sort(function(x,y){return x-y});persist(id);render();
+      var fin=s2.ended&&!miss(s2).length,up=null;
+      if(fin){var cnt=series.filter(function(x){return !x.wish&&x.ended&&!miss(x).length}).length;up=LV.find(function(l){return l.n===cnt})}
+      toast(fin?('ครบชุด '+s2.title+' แล้ว!'+(up?' ได้ฉายา "'+up.name+'"':'')):('ได้เล่ม '+v+' ของ '+s2.title+' แล้ว'),function(){
+        var s3=get(id);if(!s3)return;
+        s3.owned=s3.owned.filter(function(x){return x!==v});persist(id);render();
+      });
+    },160);
+  } else if(act==='read'){
+    var rv=+b.dataset.v;b.classList.add('gone');
+    setTimeout(function(){
+      var s2=get(id);if(!s2||s2.read.indexOf(rv)>=0)return;
+      s2.read=s2.read.concat(rv).sort(function(x,y){return x-y});persist(id);render();
+      toast('อ่านเล่ม '+rv+' ของ '+s2.title+' แล้ว',function(){
+        var s3=get(id);if(!s3)return;
+        s3.read=s3.read.filter(function(x){return x!==rv});persist(id);render();
+      });
+    },160);
+  } else if(act==='gotall'){
+    var prevO=s.owned.slice();s.owned=allVols(s.total);persist(id);render();
+    toast(s.ended?('ครบชุด '+s.title+' แล้ว!'):('มีครบทุกเล่มของ '+s.title+' แล้ว'),function(){var s3=get(id);if(!s3)return;s3.owned=prevO;persist(id);render()});
+  } else if(act==='readall'){
+    var prevR=s.read.slice();s.read=union(s.read,s.owned);persist(id);render();
+    toast('อ่านครบทุกเล่มที่มีของ '+s.title+' แล้ว',function(){var s3=get(id);if(!s3)return;s3.read=prevR;persist(id);render()});
+  } else if(act==='readupto'){
+    var inp=card.querySelector('.upin'),nUp=inp?parseInt(inp.value,10):0;
+    if(!(nUp>=1)){toast('ใส่เลขเล่มที่อ่านถึงก่อน');return}
+    var prevU=s.read.slice();
+    s.read=union(s.read,s.owned.filter(function(x){return x<=nUp}));persist(id);render();
+    toast('อ่านถึงเล่ม '+nUp+' ของ '+s.title+' แล้ว',function(){var s3=get(id);if(!s3)return;s3.read=prevU;persist(id);render()});
+  } else if(act==='readnext'){
+    var nx=unread(s)[0];if(!nx)return;
+    s.read=union(s.read,[nx]);persist(id);render();
+    toast('อ่านเล่ม '+nx+' ของ '+s.title+' แล้ว',function(){var s3=get(id);if(!s3)return;s3.read=s3.read.filter(function(x){return x!==nx});persist(id);render()});
+  } else if(act==='more'){
+    if(expanded.has(id))expanded.delete(id);else expanded.add(id);render();
+  } else if(act==='edit'){openDlg(s)}
+  else if(act==='plus'){
+    if(s.ended)return;
+    if(s.total>=999){toast('ครบ 999 เล่มแล้ว');return}
+    s.total+=1;persist(id);render();
+    toast('เพิ่มเล่ม '+s.total+' ของ '+s.title+' แล้ว',function(){
+      var s3=get(id);if(!s3)return;
+      s3.owned=s3.owned.filter(function(x){return x<s3.total});s3.total=Math.max(1,s3.total-1);persist(id);render();
+    });
+  } else if(act==='bought'){
+    s.wish=false;persist(id);render();
+    toast('ย้าย '+s.title+' เข้าคลังแล้ว',function(){var s3=get(id);if(!s3)return;s3.wish=true;persist(id);render()});
+  }
+});
+$('#fchips').addEventListener('click',function(e){
+  var b=e.target.closest('[data-f]');if(!b)return;
+  filt=b.dataset.f;saveView();render();
+});
+$('#sortSel').addEventListener('change',function(e){
+  var v=e.target.value;if(!SORTS[v])return;
+  sortBy=v;saveView();render();
+});
+function setTab(t){
+  tab=t;render();
+  var el=document.querySelector('.tab[data-tab="'+t+'"]');
+  if(el&&el.scrollIntoView)el.scrollIntoView({inline:'center',block:'nearest'});
+}
+document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
+$('#q').addEventListener('input',function(e){query=e.target.value;render()});
+$('#add').addEventListener('click',function(){openDlg(null)});
+
+/* ---------- dialog ---------- */
+var D=null,dlg=$('#dlg');
+function openDlg(s){
+  D=s?{id:s.id,wish:s.wish,ended:s.ended,sets:{own:new Set(s.owned),read:new Set(s.read)},mode:'own',cover:null,coverId:s.coverId,coverData:s.coverData,removed:false,confirm:false}
+     :{id:null,wish:tab==='wish',ended:false,sets:{own:new Set(),read:new Set()},mode:'own',cover:null,coverId:'',coverData:'',removed:false,confirm:false};
+  Object.defineProperty(D,'owned',{get:function(){return D.sets[D.mode]},set:function(v){D.sets[D.mode]=v}});
+  $('#dTitle').textContent=s?'แก้ไขเรื่อง':'เพิ่มเรื่องใหม่';
+  $('#fTitle').value=s?s.title:'';$('#fTotal').value=s?s.total:1;$('#fPrice').value=(s&&s.price)?s.price:'';$('#fFile').value='';
+  $('#err').hidden=true;$('#rFrom').value='';$('#rTo').value='';$('#xList').value='';$('#rUpto').value='';
+  $('#bDel').hidden=!s;$('#bDel').textContent='ลบเรื่องนี้';
+  syncDlg();
+  if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','');
+  if(!s)setTimeout(function(){$('#fTitle').focus()},50);
+}
+function dTotal(){var n=parseInt($('#fTotal').value,10);return n>=1&&n<=999?n:1}
+function syncDlg(){
+  $('#segHave').setAttribute('aria-pressed',D.wish?'false':'true');
+  $('#segWish').setAttribute('aria-pressed',D.wish?'true':'false');
+  $('#mOwn').setAttribute('aria-pressed',D.mode==='own'?'true':'false');$('#mRead').setAttribute('aria-pressed',D.mode==='read'?'true':'false');
+  $('#ownedLbl').textContent=D.mode==='read'?'ติ๊กเล่มที่อ่านแล้ว':'ติ๊กเล่มที่มีแล้ว';
+  $('#xList').placeholder=(D.mode==='read'?'อ่านครบ':'มีครบ')+' ยกเว้นเล่ม เช่น 3, 15, 40-42';
+  $('#readRow').hidden=D.mode!=='read';
+  $('#ownedWrap').hidden=D.wish;$('#endWrap').hidden=D.wish;$('#fEnded').setAttribute('aria-pressed',D.ended?'true':'false');
+  var n=dTotal(),h='';
+  for(var i=1;i<=n;i++)h+='<button type="button" class="vol" data-v="'+i+'" aria-pressed="'+(D.owned.has(i)?'true':'false')+'">'+i+'</button>';
+  $('#ownedGrid').innerHTML=h;
+  syncCount();
+  var src=D.cover?D.cover.data:(D.removed?'':(D.coverId?'/_blob/'+D.coverId:D.coverData));
+  $('#fPrev').innerHTML=src?'<img class="cover" alt="ตัวอย่างปก" src="'+esc(src)+'">':'<div class="cover ph" aria-hidden="true"><span>?</span></div>';
+  $('#fClear').hidden=!src;
+}
+function syncCount(){
+  var n=dTotal(),have=0;D.owned.forEach(function(v){if(v<=n)have++});
+  $('#ownedCount').textContent=D.mode==='read'?('อ่านแล้ว '+have+' ยังไม่อ่าน '+(n-have)):('มี '+have+' ขาด '+(n-have));
+}
+function refreshGrid(){
+  document.querySelectorAll('#ownedGrid .vol').forEach(function(b){b.setAttribute('aria-pressed',D.owned.has(+b.dataset.v)?'true':'false')});
+  syncCount();$('#err').hidden=true;
+}
+function parseNums(str,max){
+  var out=new Set();
+  String(str).replace(/[\u2013\u2014]/g,'-').split(/[,\s]+/).forEach(function(t){
+    if(!t)return;var m=t.match(/^(\d+)(?:-(\d+))?$/);if(!m)return;
+    var a=+m[1],b=m[2]?+m[2]:a;if(a>b){var x=a;a=b;b=x}
+    for(var i=Math.max(1,a);i<=Math.min(max,b);i++)out.add(i);
+  });
+  return out;
+}
+$('#bAll').onclick=function(){D.owned=new Set();for(var i=1;i<=dTotal();i++)D.owned.add(i);refreshGrid()};
+$('#bNone').onclick=function(){D.owned=new Set();refreshGrid()};
+function rangeOp(on){
+  var n=dTotal(),a=parseInt($('#rFrom').value,10),b=parseInt($('#rTo').value,10);
+  if(!(a>=1)){showErr('ใส่เลขเล่มเริ่มต้นของช่วงก่อน');return}
+  if(!(b>=1))b=a;if(a>b){var t=a;a=b;b=t}
+  b=Math.min(b,n);
+  for(var i=a;i<=b;i++){if(on)D.owned.add(i);else D.owned.delete(i)}
+  refreshGrid();
+}
+$('#rOn').onclick=function(){rangeOp(true)};
+$('#rOff').onclick=function(){rangeOp(false)};
+$('#xGo').onclick=function(){
+  var n=dTotal(),ex=parseNums($('#xList').value,n);
+  if(!ex.size){showErr('ใส่เลขเล่มที่ขาด เช่น 3, 15, 40-42');return}
+  D.owned=new Set();for(var i=1;i<=n;i++){if(!ex.has(i))D.owned.add(i)}
+  refreshGrid();
+};
+$('#fEnded').onclick=function(){D.ended=!D.ended;this.setAttribute('aria-pressed',D.ended?'true':'false')};
+$('#rUptoGo').onclick=function(){
+  var n=parseInt($('#rUpto').value,10);
+  if(!(n>=1)){showErr('ใส่เลขเล่มที่อ่านถึงก่อน');return}
+  D.sets.read=new Set();for(var i=1;i<=Math.min(n,dTotal());i++)D.sets.read.add(i);
+  refreshGrid();
+};
+$('#rSame').onclick=function(){
+  var n=dTotal();D.sets.read=new Set();
+  D.sets.own.forEach(function(v){if(v<=n)D.sets.read.add(v)});
+  refreshGrid();
+};
+$('#mOwn').onclick=function(){D.mode='own';syncDlg()};
+$('#mRead').onclick=function(){D.mode='read';syncDlg()};
+$('#segHave').onclick=function(){D.wish=false;syncDlg()};
+$('#segWish').onclick=function(){D.wish=true;syncDlg()};
+$('#fTotal').addEventListener('input',function(){syncDlg()});
+$('#ownedGrid').addEventListener('click',function(e){
+  var b=e.target.closest('.vol');if(!b)return;
+  var v=+b.dataset.v;
+  if(D.owned.has(v))D.owned.delete(v);else D.owned.add(v);
+  b.setAttribute('aria-pressed',D.owned.has(v)?'true':'false');syncCount();
+});
+$('#bCancel').onclick=function(){dlg.close()};
+$('#fClear').onclick=function(){D.cover=null;D.removed=true;$('#fFile').value='';syncDlg()};
+function showErr(m){var e=$('#err');e.textContent=m;e.hidden=false}
+
+function makeCover(file,max,q){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),img=new Image();
+    img.onload=function(){
+      var r=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+      var c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*r));c.height=Math.max(1,Math.round(img.naturalHeight*r));
+      var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(blob){
+        if(!blob){rej(new Error('encode'));return}
+        var fr=new FileReader();fr.onload=function(){res({blob:blob,data:fr.result})};fr.onerror=rej;fr.readAsDataURL(blob);
+      },'image/jpeg',q);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('load'))};
+    img.src=url;
+  });
+}
+$('#fFile').addEventListener('change',function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  var useAssets=!!(assets&&mode==='cloud');
+  makeCover(f,useAssets?480:320,useAssets?0.82:0.7).then(function(r){
+    D.cover={blob:useAssets?r.blob:null,data:r.data};D.removed=false;syncDlg();
+  }).catch(function(){showErr('อ่านรูปนี้ไม่ได้ ลองรูปอื่น (JPG หรือ PNG)')});
+});
+
+$('#bSave').onclick=function(){
+  var title=$('#fTitle').value.trim(),totalRaw=parseInt($('#fTotal').value,10);
+  if(!title){showErr('ใส่ชื่อเรื่องก่อน');return}
+  if(!(totalRaw>=1&&totalRaw<=999)){showErr('จำนวนเล่มต้องอยู่ระหว่าง 1 ถึง 999');return}
+  var btn=$('#bSave');btn.disabled=true;$('#err').hidden=true;
+  var priceRaw=parseFloat($('#fPrice').value);
+  var price=(isFinite(priceRaw)&&priceRaw>0)?Math.min(999999,Math.round(priceRaw*100)/100):0;
+  var s=D.id?get(D.id):null,isNew=!s;
+  if(isNew)s={id:newId(),createdAt:Date.now(),coverId:'',coverData:'',owned:[],read:[]};
+  var oldId=s.coverId;
+  var coverStep=Promise.resolve();
+  if(D.cover&&D.cover.blob){
+    coverStep=assets.upload(D.cover.blob,{type:'image/jpeg'}).then(function(r){s.coverId=r.id;s.coverData=''}).catch(function(){
+      s.coverData=D.cover.data.length<180000?D.cover.data:s.coverData;toast('อัปโหลดรูปไม่สำเร็จ');
+    });
+  } else if(D.cover){s.coverData=D.cover.data;s.coverId=''}
+  else if(D.removed){s.coverData='';s.coverId=''}
+  coverStep.then(function(){
+    if(oldId&&oldId!==s.coverId)dropAsset(oldId);
+    s.title=title;s.total=totalRaw;s.wish=D.wish;s.ended=!!D.ended;s.price=price;
+    s.owned=Array.from(D.sets.own).filter(function(v){return v<=totalRaw}).sort(function(a,b){return a-b});
+    s.read=Array.from(D.sets.read).filter(function(v){return v<=totalRaw}).sort(function(a,b){return a-b});
+    if(isNew)series.push(s);
+    persist(s.id);
+    if(isNew){tab=s.wish?'wish':(miss(s).length?'missing':'all')}
+    else if(s.wish){tab='wish'}
+    query='';$('#q').value='';
+    render();dlg.close();btn.disabled=false;
+  });
+};
+$('#bDel').onclick=function(){
+  if(!D||!D.id)return;
+  if(!D.confirm){D.confirm=true;this.textContent='แตะอีกครั้งเพื่อลบ';return}
+  var s=get(D.id);if(s)removeSeries(s);
+  render();dlg.close();
+};
+
+/* ---------- boot ---------- */
+var rsT=null,importing=false;
+function renderSoon(){
+  if(importing||rsT)return;
+  rsT=setTimeout(function(){rsT=null;render()},150);
+}
+function startCloud(){
+  mode='cloud';
+  unsub=db.collection('series').onSnapshot(function(snap){
+    var next=snap.docs.map(function(d){return clean(d.id,d.data()||{})});
+    dirty.forEach(function(id){
+      var l=get(id);if(!l)return;
+      var i=next.findIndex(function(x){return x.id===id});
+      if(i>=0)next[i]=l;else next.push(l);
+    });
+    clearTimeout(stuckT);
+    var first=loading;
+    series=next;loading=false;
+    if(first)render();else renderSoon();
+  },function(err){
+    clearTimeout(stuckT);loading=false;render();
+    toast('เชื่อมต่อข้อมูลไม่ได้ ('+(err&&err.code?err.code:'ไม่ทราบสาเหตุ')+')');
+  });
+}
+var fbAuth=null,fbFs=null,unsub=null,stuckT=null;
+function authView(msg,showBtn){
+  $('#authMsg').textContent=msg;$('#bGoogle').hidden=!showBtn;
+  $('#auth').hidden=false;$('.wrap').hidden=true;
+}
+function authErr(m){var e=$('#authErr');e.textContent=m;e.hidden=false}
+var curUid=null;
+function startUser(user){
+  curUid=user.uid;
+  var col=fbFs.collection('users').doc(user.uid).collection('series');
+  db={collection:function(){return {
+    onSnapshot:function(ok,bad){return col.onSnapshot(ok,bad)},
+    doc:function(id){var d=col.doc(id);return {set:function(o){return d.set(o)},'delete':function(){return d['delete']()}}}
+  }}};
+  assets=null;
+  $('#acctMail').textContent=user.email||'';$('#acct').hidden=false;
+  series=[];loading=true;
+  $('#auth').hidden=true;$('.wrap').hidden=false;
+  clearTimeout(stuckT);
+  stuckT=setTimeout(function(){
+    if(loading)toast('เชื่อมต่อข้อมูลช้ากว่าปกติ กำลังลองต่อ… ตรวจสอบอินเทอร์เน็ตได้ถ้ายังไม่ขึ้น');
+  },8000);
+  render();startCloud();
+}
+function stopUser(){
+  curUid=null;
+  clearTimeout(stuckT);
+  if(unsub){try{unsub()}catch(e){}unsub=null}
+  Object.keys(timers).forEach(function(k){clearTimeout(timers[k])});
+  dirty.clear();series=[];db=null;$('#acct').hidden=true;
+  authView('เก็บสะสมมังงะของคุณ ดูได้ทุกเครื่อง เข้าสู่ระบบด้วยบัญชี Google เพื่อเริ่มต้น',true);
+}
+$('#bPing').onclick=function(){
+  if(!curUid||!fbFs){toast('ยังไม่ได้เชื่อมต่อ');return}
+  var btn=this;btn.disabled=true;
+  var t0=Date.now();
+  toast('กำลังทดสอบ… (รอได้สูงสุด 40 วิ)');
+  var ref=fbFs.collection('users').doc(curUid).collection('_diag').doc('ping');
+  withTimeout(ref.set({t:Date.now()}),40000).then(function(w){
+    var secs=((Date.now()-t0)/1000).toFixed(1);
+    if(!w.ok){
+      hideToast();btn.disabled=false;
+      if(w.reason==='timeout')toast('เขียนข้อมูลไม่สำเร็จแม้รอ 40 วิ — เน็ตนี้เชื่อมต่อ Firestore แทบไม่ได้เลย ลองเปลี่ยนเป็นเน็ตมือถือ หรือปิด VPN/ตัวบล็อกโฆษณาแล้วลองใหม่');
+      else if(w.reason==='permission-denied')toast('ไม่มีสิทธิ์เขียนข้อมูล (permission-denied) — ตรวจว่ากด Publish กฎใน Firestore Rules แล้วหรือยัง');
+      else toast('เขียนข้อมูลไม่สำเร็จ ('+w.reason+')');
+      return;
+    }
+    withTimeout(ref['delete'](),40000).then(function(){
+      btn.disabled=false;
+      var lvl=secs>5?' (ช้ากว่าปกติมาก ปกติควรไม่ถึง 1 วิ — คำแนะนำ: ลองปิด VPN/ตัวบล็อกโฆษณา หรือเปลี่ยนเน็ต)':'';
+      toast('เชื่อมต่อและเขียนข้อมูลได้ ใช้เวลา '+secs+' วิ'+lvl);
+    });
+  });
+};
+$('#bGoogle').onclick=function(){
+  var prov=new firebase.auth.GoogleAuthProvider();
+  $('#authErr').hidden=true;
+  fbAuth.signInWithPopup(prov).catch(function(e){
+    var c=(e&&e.code)||'';
+    if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'||c==='auth/web-storage-unsupported'){return fbAuth.signInWithRedirect(prov)}
+    if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return;
+    authErr(c==='auth/unauthorized-domain'?'โดเมนนี้ยังไม่ได้อนุญาตใน Firebase (Authentication > Settings > Authorized domains)'
+      :c==='auth/operation-not-allowed'?'ยังไม่ได้เปิดการล็อกอินด้วย Google ใน Firebase (Authentication > Sign-in method)'
+      :'เข้าสู่ระบบไม่สำเร็จ ('+(c||'ไม่ทราบสาเหตุ')+')');
+  });
+};
+$('#bOut').onclick=function(){if(fbAuth)fbAuth.signOut()};
+
+/* ---------- backup / import ---------- */
+var dlgD=$('#dlgData');
+function impMsg(t){$('#impMsg').textContent=t}
+var _clearArmReset=function(){if($('#bClear')){}};
+$('#bData').onclick=function(){impMsg('');if(dlgD.showModal)dlgD.showModal();else dlgD.setAttribute('open','')};
+$('#bDataClose').onclick=function(){dlgD.close()};
+$('#bExp').onclick=function(){
+  var payload={app:'manga-shelf',version:1,exportedAt:new Date().toISOString(),series:series.map(function(s){var o=body(s);o.id=s.id;return o})};
+  var blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='manga-shelf-backup.json';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);
+  impMsg('ส่งออกแล้ว '+series.length+' เรื่อง');
+};
+function withTimeout(p,ms){
+  return new Promise(function(res){
+    var settled=false,t=setTimeout(function(){if(!settled){settled=true;res({ok:false,reason:'timeout'})}},ms);
+    p.then(function(v){if(!settled){settled=true;clearTimeout(t);res({ok:true,value:v})}},
+           function(e){if(!settled){settled=true;clearTimeout(t);res({ok:false,reason:(e&&e.code)||'error'})}});
+  });
+}
+function importJSON(txt){
+  var data;try{data=JSON.parse(txt)}catch(e){impMsg('ไฟล์นี้อ่านไม่ได้ (ไม่ใช่ไฟล์สำรองจากตู้มังงะ)');return}
+  var arr=Array.isArray(data)?data:(data&&Array.isArray(data.series)?data.series:null);
+  if(!arr||!arr.length){impMsg('ไม่พบข้อมูลเรื่องในไฟล์นี้');return}
+  var items=arr.slice(0,2000).filter(function(d){return d&&typeof d==='object'}).map(function(d){
+    var id=/^[A-Za-z0-9_-]{1,64}$/.test(d.id||'')?d.id:newId();
+    var s=clean(id,d);s.coverId='';if(s.coverData.length>700000)s.coverData='';
+    return s;
+  });
+  importing=true;
+  var total=items.length,done=0,ok=0;
+  impMsg('กำลังนำเข้า 0 / '+total+' เรื่อง…');
+  function writeOne(s,ms){
+    return withTimeout(db.collection('series').doc(s.id).set(body(s)),ms).then(function(r){return {s:s,ok:r.ok}});
+  }
+  function passOver(list,conc,ms,onEach){
+    var i=0,active=0,ok2=0,failed=[];
+    return new Promise(function(resolveAll){
+      function pump(){
+        if(i>=list.length&&active===0){resolveAll({ok:ok2,failed:failed});return}
+        while(active<conc&&i<list.length){
+          (function(s){
+            active++;
+            writeOne(s,ms).then(function(r){
+              active--;if(r.ok)ok2++;else failed.push(s);
+              onEach();pump();
+            });
+          })(list[i]);
+          i++;
+        }
+      }
+      pump();
+    });
+  }
+  passOver(items,2,25000,function(){done++;impMsg('กำลังนำเข้า '+done+' / '+total+' เรื่อง…')}).then(function(r){
+    ok=r.ok;
+    if(!r.failed.length){importing=false;render();impMsg('นำเข้าแล้ว '+ok+' เรื่อง');return}
+    // network looked slow/unstable: automatically retry the ones that failed, sequentially, with more time
+    var attempt=0,maxAttempts=2,remaining=r.failed;
+    (function retryRound(){
+      attempt++;
+      impMsg('เชื่อมต่อช้า กำลังลองใหม่เรื่องที่พลาด ('+remaining.length+' เรื่อง) รอบ '+attempt+'/'+maxAttempts+'…');
+      passOver(remaining,1,35000,function(){}).then(function(r2){
+        ok+=r2.ok;remaining=r2.failed;
+        if(!remaining.length||attempt>=maxAttempts){
+          importing=false;render();
+          impMsg(remaining.length?('นำเข้า '+ok+' จาก '+total+' เรื่อง (พลาดไป '+remaining.length+' เรื่อง — เน็ตอาจไม่เสถียร ลองนำเข้าไฟล์เดิมซ้ำอีกครั้งได้ เรื่องที่สำเร็จแล้วจะไม่ซ้ำ)'):('นำเข้าแล้ว '+ok+' เรื่อง'));
+        }else retryRound();
+      });
+    })();
+  });
+}
+var clearArm=false;
+function deleteAllIds(ids,ms,conc){
+  var i=0,active=0,done=0,fail=[];
+  return new Promise(function(resolveAll){
+    function pump(){
+      if(i>=ids.length&&active===0){resolveAll(fail);return}
+      while(active<conc&&i<ids.length){
+        (function(id){
+          active++;
+          withTimeout(db.collection('series').doc(id)['delete'](),ms).then(function(r){
+            active--;done++;if(!r.ok)fail.push(id);
+            impMsg('กำลังลบ '+done+' / '+ids.length+' เรื่อง…');
+            pump();
+          });
+        })(ids[i]);
+        i++;
+      }
+    }
+    pump();
+  });
+}
+$('#bClear').onclick=function(){
+  if(!clearArm){clearArm=true;this.textContent='แน่ใจนะ? กดอีกครั้งเพื่อลบข้อมูลทั้งหมด';return}
+  clearArm=false;this.textContent='ล้างข้อมูลทั้งหมด';
+  var ids=series.map(function(s){return s.id});
+  if(!ids.length){impMsg('ไม่มีข้อมูลอยู่แล้ว');return}
+  impMsg('กำลังลบ 0 / '+ids.length+' เรื่อง…');
+  deleteAllIds(ids,20000,2).then(function(fail){
+    if(!fail.length){series=[];render();impMsg('ลบข้อมูลทั้งหมดแล้ว');return}
+    impMsg('เชื่อมต่อช้า กำลังลองลบเรื่องที่เหลืออีกครั้ง ('+fail.length+' เรื่อง)…');
+    deleteAllIds(fail,35000,1).then(function(fail2){
+      series=series.filter(function(s){return fail2.indexOf(s.id)>=0});
+      render();
+      impMsg(fail2.length?('ลบไม่สำเร็จ '+fail2.length+' เรื่อง — กดปุ่มนี้อีกครั้งเพื่อลองใหม่'):'ลบข้อมูลทั้งหมดแล้ว');
+    });
+  });
+};
+$('#fImp').addEventListener('change',function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  var fr=new FileReader();fr.onload=function(){importJSON(String(fr.result))};fr.readAsText(f);
+  e.target.value='';
+});
+
+/* ---------- boot ---------- */
+loadView();
+render();
+(function boot(){
+  var C=window.FIREBASE_CONFIG||{};
+  if(typeof firebase==='undefined'){authView('โหลด Firebase ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้านี้',false);return}
+  if(!C.apiKey||/PASTE/.test(C.apiKey)||/PASTE/.test(C.projectId||'')){authView('ยังไม่ได้ใส่ค่า firebaseConfig ในไฟล์ index.html (ดูขั้นตอนใน README)',false);return}
+  try{
+    firebase.initializeApp(C);
+    fbAuth=firebase.auth();fbFs=firebase.firestore();
+    try{fbFs.enablePersistence({synchronizeTabs:true}).catch(function(){})}catch(e){}
+    fbAuth.getRedirectResult().catch(function(e){authErr('เข้าสู่ระบบไม่สำเร็จ ('+((e&&e.code)||'ไม่ทราบสาเหตุ')+')')});
+    fbAuth.onAuthStateChanged(function(u){if(u)startUser(u);else stopUser()});
+  }catch(e){authView('ตั้งค่า Firebase ไม่ถูกต้อง: '+e.message,false)}
+})();
+})();
+</script>
+</body>
+</html>
